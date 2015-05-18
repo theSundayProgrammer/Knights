@@ -44,7 +44,6 @@ struct KState
         int Parent; // pointer to the parent state
 };
 
-const int MAX_POSITIONS = 8; //There are at most 8 positions that knight can move to in one move
 struct KDist
 {
 	int cx;
@@ -66,7 +65,8 @@ bool IsValidState(KState const& p)
 }
 std::vector<KState> ValidMoves(KState const& inp)
 {
-	KDist const moves[MAX_POSITIONS] = {{-2,-1},{-2,1},{2,-1},{2,1},{-1,-2},{-1,2},{1,-2},{1,2}};
+	const int MAX_POSITIONS = 8; //There are at most 8 positions that knight can move to in one move
+	KDist const moves[MAX_POSITIONS] = { { -2, -1 }, { -2, 1 }, { 2, -1 }, { 2, 1 }, { -1, -2 }, { -1, 2 }, { 1, -2 }, { 1, 2 } };
 	std::vector<KState> outp;
 	for (int i=0; i<MAX_POSITIONS; ++i)
 	{
