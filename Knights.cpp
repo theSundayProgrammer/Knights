@@ -17,13 +17,14 @@
 //
 
 
-#include <tchar.h>
+
 #include <vector>
 #include <deque>
 #include <stack>
 #include <algorithm>
 #include <iostream>
 #include <exception>
+#include <functional>
 const int MAX_NODE_COUNT = 64;
 
 
@@ -72,8 +73,8 @@ void PrintOut(Tracker<T> const& endState, Tracker<T> const* seen, int curMax)
 }
 
 
-template<class T>
-int Compute(Tracker<T> const& startState, Tracker<T> const& endState, Tracker<T>* seen)
+template<class T, class Container >
+int Compute(Tracker<T> const& startState, Tracker<T> const& endState, Tracker<T>* seen, std::function< Container(T const&)> Neighbours)
 {
 	int curMax = 0;
 	if (startState.pos == endState.pos)
@@ -86,7 +87,7 @@ int Compute(Tracker<T> const& startState, Tracker<T> const& endState, Tracker<T>
 		Tracker<T> pos = tobeseen.front();
 		tobeseen.pop_front();
 		seen[curMax] = pos;
-		std::vector<T> neighbours = Neighbours(pos.pos);
+		Container neighbours = Neighbours(pos.pos);
 		if (neighbours.end() !=
 			std::find(neighbours.begin(), neighbours.end(), endState.pos))
 		{
@@ -163,11 +164,11 @@ std::ostream& operator<<(std::ostream& o, node const& pos)
 	return o << c << pos.y+1;
 }
 
-
-
+typedef char _TCHAR;
+#define _T(x) x
 node ConvertFromStr(_TCHAR* arg)
 {
-	std::basic_string<TCHAR> sarg(arg);
+	std::basic_string<_TCHAR> sarg(arg);
 	_TCHAR const* err= _T("Invalid Argument ");
 	std::basic_string<_TCHAR> msg(err);
 	msg += sarg;
@@ -188,7 +189,7 @@ node ConvertFromStr(_TCHAR* arg)
 	return pos;
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, _TCHAR* argv[])
 {
 	if (argc!=3)
 	{
@@ -204,7 +205,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		//hence 'seen' is of sufficient length
 		KState startState{ ConvertFromStr(argv[1]),0 };
 		KState endState {ConvertFromStr(argv[2]), 0};
-		int curMax = Compute(startState,endState,seen);
+		int curMax = Compute<node, std::vector<node>>(startState,endState,seen,Neighbours);
 		PrintOut(endState, seen, curMax);
 	}
 	catch(std::exception& ex)
