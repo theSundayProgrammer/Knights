@@ -24,6 +24,9 @@
 #include <algorithm>
 #include <iostream>
 #include <exception>
+const int MAX_NODE_COUNT = 64;
+
+
 class myexception: public std::exception
 {
 public:
@@ -36,12 +39,84 @@ public:
 private:
 	std::string str_;
 };
+
 //State is the chess board
-struct KState
+template<class T>
+struct Tracker
+{
+	T pos;
+	int Parent; // pointer to the parent state
+};
+
+
+
+template<class T>
+void PrintOut(Tracker<T> const& endState, Tracker<T> const* seen, int curMax)
+{
+	std::stack<int> successMoves;
+	int k = curMax;
+	while (k != 0)
+	{
+		successMoves.push(k);
+		k = seen[k].Parent;
+	}
+
+	while (!successMoves.empty())
+	{
+		int k = successMoves.top();
+		successMoves.pop();
+		std::cout << seen[k].pos << " ";
+	}
+	std::cout << endState.pos << std::endl;
+
+}
+
+
+template<class T>
+int Compute(Tracker<T> const& startState, Tracker<T> const& endState, Tracker<T>* seen)
+{
+	int curMax = 0;
+	if (startState.pos == endState.pos)
+		return curMax;
+
+	std::deque<Tracker<T>> tobeseen;
+	tobeseen.push_back(startState);
+	while (1)
+	{
+		Tracker<T> pos = tobeseen.front();
+		tobeseen.pop_front();
+		seen[curMax] = pos;
+		std::vector<T> neighbours = Neighbours(pos.pos);
+		if (neighbours.end() !=
+			std::find(neighbours.begin(), neighbours.end(), endState.pos))
+		{
+			//found
+			break;
+		}
+		for (auto& it : neighbours)
+		{
+			if ((std::find(seen, seen + curMax, pos) == seen + curMax) &&
+				(std::find_if(tobeseen.begin(), tobeseen.end(), [=](Tracker<T> const & p) {return p.pos == it; }) == tobeseen.end()))
+			{
+				Tracker<T> val{ it, curMax };
+				tobeseen.emplace_back(val);
+			}
+		}
+		++curMax;
+	}
+	return curMax;
+}
+
+template<class T>
+bool operator==(Tracker<T> const& f, Tracker<T> const& s)
+{
+	return f.pos == s.pos;
+}
+
+struct node
 {
 	int x;
 	int y;
-        int Parent; // pointer to the parent state
 };
 
 struct KDist
@@ -50,27 +125,30 @@ struct KDist
 	int cy;
 };
 
-KState  operator+(KState const& inp, KDist const& d)
+
+
+node  operator+(node const& inp, KDist const& d)
 {
-	KState res = {inp.x + d.cx, inp.y + d.cy};
+	node res = {inp.x + d.cx, inp.y + d.cy};
 	return res;
 }
-bool operator==(KState const& f, KState const& s)
+bool operator==(node const& f, node const& s)
 {
 	return f.x == s.x && f.y == s.y;
 }
-bool IsValidState(KState const& p)
+
+bool IsValidState(node const& p)
 {
 	return p.x >= 0 && p.x <8 && p.y>=0 && p.y <8;
 }
-std::vector<KState> ValidMoves(KState const& inp)
+std::vector<node> Neighbours(node const& inp)
 {
 	const int MAX_POSITIONS = 8; //There are at most 8 positions that knight can move to in one move
 	KDist const moves[MAX_POSITIONS] = { { -2, -1 }, { -2, 1 }, { 2, -1 }, { 2, 1 }, { -1, -2 }, { -1, 2 }, { 1, -2 }, { 1, 2 } };
-	std::vector<KState> outp;
+	std::vector<node> outp;
 	for (int i=0; i<MAX_POSITIONS; ++i)
 	{
-		KState newState= inp + moves[i];
+		node newState= inp + moves[i];
 		if (IsValidState(newState))
 		{
 			outp.push_back(newState);
@@ -79,66 +157,15 @@ std::vector<KState> ValidMoves(KState const& inp)
 	return outp;
 }
 
-std::ostream& operator<<(std::ostream& o, KState const& pos)
+std::ostream& operator<<(std::ostream& o, node const& pos)
 {
 	char c= 'A' + pos.x;
 	return o << c << pos.y+1;
 }
-void PrintOut(KState const& endState, KState const* seen, int curMax)
-{
-	std::stack<int> successMoves;
-	int k=curMax;
-	while (k!=0)
-	{
-		successMoves.push(k);
-		k=seen[k].Parent;
-	}
-
-	while(!successMoves.empty())
-	{
-		int k = successMoves.top();
-		successMoves.pop();
-		std::cout << seen[k] << " ";
-	}
-	std::cout << endState << std::endl;
-
-}
 
 
-int Compute(KState const& startState, KState const& endState, KState* seen)
-{
-	int curMax=0;
-	if (startState == endState)
-		return curMax;
 
-	std::deque<KState> tobeseen;
-	tobeseen.push_back(startState);
-	while (1)
-	{
-		KState pos=tobeseen.front();
-		tobeseen.pop_front();
-		seen[curMax]= pos;
-		std::vector<KState> nextpositions = ValidMoves(pos);
-		if(nextpositions.end() != 
-			std::find(nextpositions.begin(),nextpositions.end(),endState))
-		{
-			//found
-			break;
-		}
-		for (auto& it : nextpositions)
-		{
-			if (std::find(seen, seen + curMax, pos) == seen + curMax &&
-				std::find(tobeseen.begin(), tobeseen.end(), it) == tobeseen.end())
-			{
-				it.Parent = curMax;
-				tobeseen.push_back(it);
-			}
-		}
-		++curMax;
-	}
-	return curMax;
-}
-KState ConvertFromStr(_TCHAR* arg)
+node ConvertFromStr(_TCHAR* arg)
 {
 	std::basic_string<TCHAR> sarg(arg);
 	_TCHAR const* err= _T("Invalid Argument ");
@@ -149,7 +176,7 @@ KState ConvertFromStr(_TCHAR* arg)
 	{
 		throw ex;
 	}
-	KState pos;
+	node pos;
 	pos.x = toupper(*arg) - 'A';
 	pos.y = *++arg - '1';
 	if (*++arg != '\0')
@@ -158,7 +185,6 @@ KState ConvertFromStr(_TCHAR* arg)
 	{
 		throw ex;
 	}
-	pos.Parent=0;
 	return pos;
 }
 
@@ -169,15 +195,15 @@ int _tmain(int argc, _TCHAR* argv[])
 		std::cout << "Usage example:" << argv[0] << " D3 D4" << std::endl;
 		return 0;
 	}
-	try 
+	try
 	{
-		const int MAX_BOARD_POSITIONS=64; 
-		KState seen[MAX_BOARD_POSITIONS]; 
+		typedef Tracker<node> KState;
+		KState seen[MAX_NODE_COUNT];
 		//even if the breadth-first search covers ALL the positions on 
-		//the board there are at most MAX_BOARD_POSITIONS;
+		//the board there are at most MAX_NODE_COUNT nodes
 		//hence 'seen' is of sufficient length
-		KState startState=ConvertFromStr(argv[1]);
-		KState endState=ConvertFromStr(argv[2]);
+		KState startState{ ConvertFromStr(argv[1]),0 };
+		KState endState {ConvertFromStr(argv[2]), 0};
 		int curMax = Compute(startState,endState,seen);
 		PrintOut(endState, seen, curMax);
 	}
