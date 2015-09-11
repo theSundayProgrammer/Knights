@@ -82,7 +82,7 @@ int Compute(Tracker<T> const& startState, Tracker<T> const& endState, Tracker<T>
 
 	std::deque<Tracker<T>> tobeseen;
 	tobeseen.push_back(startState);
-	while (1)
+	while (!tobeseen.empty())
 	{
 		Tracker<T> pos = tobeseen.front();
 		tobeseen.pop_front();
@@ -92,7 +92,7 @@ int Compute(Tracker<T> const& startState, Tracker<T> const& endState, Tracker<T>
 			std::find(neighbours.begin(), neighbours.end(), endState.pos))
 		{
 			//found
-			break;
+			return curMax;
 		}
 		for (auto& it : neighbours)
 		{
@@ -105,7 +105,7 @@ int Compute(Tracker<T> const& startState, Tracker<T> const& endState, Tracker<T>
 		}
 		++curMax;
 	}
-	return curMax;
+	return 0;
 }
 
 template<class T>
@@ -118,6 +118,7 @@ struct node
 {
 	int x;
 	int y;
+    int index () {return x*8 + y;}
 };
 
 struct KDist
