@@ -51,7 +51,7 @@ struct Tracker
 
 
 
-template<class T>
+template<class T, class outType>
 void PrintOut(Tracker<T> const& endState, Tracker<T> const* seen, int curMax)
 {
 	std::stack<int> successMoves;
@@ -66,9 +66,9 @@ void PrintOut(Tracker<T> const& endState, Tracker<T> const* seen, int curMax)
 	{
 		int k = successMoves.top();
 		successMoves.pop();
-		std::cout << seen[k].pos << " ";
+		std::cout << outType(seen[k].pos) << " ";
 	}
-	std::cout << endState.pos << std::endl;
+	std::cout << outType(endState.pos) << std::endl;
 
 }
 
@@ -118,7 +118,10 @@ struct node
 {
 	int x;
 	int y;
-    int index () {return x*8 + y;}
+    int index () const {return x*8 + y;}
+    node(int a, int b) : x(a),y(b){}
+    
+    explicit node(int ind) { x = ind/8 ; y = ind%8;}
 };
 
 struct KDist
@@ -131,7 +134,7 @@ struct KDist
 
 node  operator+(node const& inp, KDist const& d)
 {
-	node res = {inp.x + d.cx, inp.y + d.cy};
+	node res {inp.x + d.cx, inp.y + d.cy};
 	return res;
 }
 bool operator==(node const& f, node const& s)
@@ -178,9 +181,9 @@ node ConvertFromStr(_TCHAR* arg)
 	{
 		throw ex;
 	}
-	node pos;
-	pos.x = toupper(*arg) - 'A';
-	pos.y = *++arg - '1';
+	int x = toupper(*arg) - 'A';
+	int y = *++arg - '1';
+    node pos(x,y);
 	if (*++arg != '\0')
 		throw ex;
 	if (!IsValidState(pos))
@@ -199,15 +202,23 @@ int main(int argc, _TCHAR* argv[])
 	}
 	try
 	{
-		typedef Tracker<node> KState;
+		typedef Tracker<int> KState;
 		KState seen[MAX_NODE_COUNT];
 		//even if the breadth-first search covers ALL the positions on 
 		//the board there are at most MAX_NODE_COUNT nodes
 		//hence 'seen' is of sufficient length
-		KState startState{ ConvertFromStr(argv[1]),0 };
-		KState endState {ConvertFromStr(argv[2]), 0};
-		int curMax = Compute<node, std::vector<node>>(startState,endState,seen,Neighbours);
-		PrintOut(endState, seen, curMax);
+		KState startState{ ConvertFromStr(argv[1]).index(),0 };
+		KState endState {ConvertFromStr(argv[2]).index(), 0};
+		int curMax = Compute<int, std::vector<int>>(startState,endState,seen,[](int const &n) -> std::vector<int>
+        {
+            std::vector<int> result;
+            for (auto const &val : Neighbours(node(n)))
+            {
+                result.push_back(val.index());
+            }
+            return result;
+        });
+		PrintOut<int,node>(endState, seen, curMax);
 	}
 	catch(std::exception& ex)
 	{
